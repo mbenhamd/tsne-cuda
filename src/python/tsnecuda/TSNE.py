@@ -62,6 +62,7 @@ class TSNE(object):
         self.n_iter = int(n_iter)
         self.n_iter_without_progress = int(n_iter_without_progress)
         self.min_grad_norm = float(min_grad_norm)
+        self.grad_norm = float(0.0)
         if metric not in ['euclidean']:
             raise ValueError('Non-Euclidean metrics are not currently supported. Please use metric=\'euclidean\' for now.')
         else:
@@ -82,7 +83,6 @@ class TSNE(object):
         self.epssq =float(epssq)
         self.device = int(device)
         self.print_interval = int(print_interval)
-        self.grad_norm = 0
 
         # Point dumpoing
         self.dump_file = str(dump_file)
@@ -128,7 +128,7 @@ class TSNE(object):
                 ctypes.c_float, # Theta
                 ctypes.c_float, # epssq
                 ctypes.c_float, # Minimum gradient norm
-                ctypes.c_float, # grandient norm calculated
+                N.ctypeslib.ndpointer(N.float32, ndim=1, flags='ALIGNED, F_CONTIGUOUS'), # grandient norm calculated
                 ctypes.c_int, # Initialization types
                 N.ctypeslib.ndpointer(N.float32, ndim=2, flags='ALIGNED, F_CONTIGUOUS'), # Initialization Data
                 ctypes.c_bool, # Dump points
@@ -157,7 +157,7 @@ class TSNE(object):
         self.points = N.require(X, N.float32, ['CONTIGUOUS', 'ALIGNED'])
         self.embedding = N.zeros(shape=(X.shape[0],self.n_components))
         self.embedding = N.require(self.embedding , N.float32, ['F_CONTIGUOUS', 'ALIGNED', 'WRITEABLE'])
-        self.grad_norm = N.require(self.grad_norm , N.float32)
+        self.grad_norm = N.require(self.grad_norm , N.float32,['F_CONTIGUOUS','ALIGNED'])
         
         # Handle Initialization
         if y is None:
@@ -189,7 +189,7 @@ class TSNE(object):
                 ctypes.c_float(self.theta), # Theta
                 ctypes.c_float(self.epssq), # epssq
                 ctypes.c_float(self.min_grad_norm), # Minimum gradient norm
-                ctypes.c_float(self.grad_norm), # Minimum gradient norm
+                self.grad_norm, # Gradient norm calculated
                 ctypes.c_int(self.initialization_type), # Initialization types
                 self.init_data, # Initialization Data
                 ctypes.c_bool(self.dump_points), # Dump points
