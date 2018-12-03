@@ -201,7 +201,7 @@ class TSNE(object):
                 ctypes.c_int(self.return_style), # Return style
                 ctypes.c_int(self.num_snapshots) ) # Number of snapshots
 
-        return self.embedding
+        return self.embedding, self.min_grad_norm, self.n_iter
 
 
 
