@@ -1,13 +1,13 @@
-export PATH=/usr/local/cuda-9.0/bin:$PATH
-export LD_LIBRARY_PATH=/usr/local/cuda-9.0/lib64:$LD_LIBRARY_PATH
+export PATH=/usr/local/cuda/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 git submodule init
 git submodule update 
 cd ./build
-cmake  .. -DBUILD_PYTHON=TRUE -DWITH_MKL=FALSE -DCMAKE_C_COMPILER=gcc-4.9 -DCMAKE_CXX_COMPILER=g++-4.9
+cmake  .. -DBUILD_PYTHON=ON -DWITH_MKL=ON -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6
 pwd
 make -j5 
 make
 cd python/
 pwd
-$PYTHON setup.py install --single-version-externally-managed --record=record.txt
-cp -r ../lib/* $PREFIX/lib/
+sudo python setup.py install --single-version-externally-managed --record=record.txt
+sudo cp -r ../lib/* /lib/
