@@ -39,6 +39,7 @@ void tsnecuda::bh::RunTsne(tsnecuda::Options &opt,
     const int num_points = opt.num_points;
     const int num_neighbors = (opt.num_neighbors < num_points) ? opt.num_neighbors : num_points;
     const float *high_dim_points = opt.points;
+    const float *compute_grad_norm = opt.grad_norm;
     const int high_dim = opt.num_dims;
     const float perplexity = opt.perplexity;
     const float perplexity_search_epsilon = opt.perplexity_search_epsilon;
@@ -333,17 +334,17 @@ void tsnecuda::bh::RunTsne(tsnecuda::Options &opt,
                           attractive_forces_device.begin()+num_points, attractive_forces_device.begin(), 
                           thrust::plus<float>());
         tsnecuda::util::SqrtDeviceVector(attractive_forces_device, attractive_forces_device);
-        float grad_norm = thrust::reduce(attractive_forces_device.begin(), attractive_forces_device.begin()+num_points, 
+        thrust::reduce(attractive_forces_device.begin(), attractive_forces_device.begin()+num_points, 
                                          0.0f, thrust::plus<float>()) / num_points;
-        thrust::fill(attractive_forces_device.begin(), attractive_forces_device.end(), 0.0f);
+        *compute_grad_norm = thrust::fill(attractive_forces_device.begin(), attractive_forces_device.end(), 0.0f);
 
         if (grad_norm < opt.min_gradient_norm) {
-            if (opt.verbosity >= 1) std::cout << "Reached minimum gradient norm: " << grad_norm << std::endl;
+            if (opt.verbosity >= 1) std::cout << "Reached minimum gradient norm: " << opt.min_gradient_norm << std::endl;
             break;
         }
 
         if (opt.verbosity >= 1 && step % opt.print_interval == 0) {
-            std::cout << "[Step " << step << "] Avg. Gradient Norm: " << grad_norm << std::endl;
+            std::cout << "[Step " << step << "] Avg. Gradient Norm: " << *compute_grad_norm << std::endl;
         }
             
         
