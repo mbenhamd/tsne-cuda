@@ -57,7 +57,7 @@ namespace tsnecuda {
             float epssq = 0.05 * 0.05;
 
             float min_gradient_norm = 0.0;
-            float grad_norm = 0.0;
+            float* grad_norm = nullptr;
 
             // Initialization
             TSNE_INIT initialization = TSNE_INIT::GAUSSIAN;
@@ -88,7 +88,7 @@ namespace tsnecuda {
                         num_dims(num_dims) {this->random_seed = time(NULL);}
             Options(float* points, int num_points, int num_dims, 
                     float perplexity, float learning_rate, float magnitude_factor, int num_neighbors,
-                    int iterations, int iterations_no_progress, int force_magnify_iters, float perplexity_search_epsilon, float pre_exaggeration_momentum, float post_exaggeration_momentum, float theta, float epssq, float min_gradient_norm,
+                    int iterations, int iterations_no_progress, int force_magnify_iters, float perplexity_search_epsilon, float pre_exaggeration_momentum, float post_exaggeration_momentum, float theta, float epssq, float min_gradient_norm, float* grad_norm,
                     TSNE_INIT initialization, float* preinit_data, 
                     bool dump_points, int dump_interval,
                     RETURN_STYLE return_style, float* return_data, int num_snapshots,
@@ -111,6 +111,7 @@ namespace tsnecuda {
                     theta(theta),
                     epssq(epssq),
                     min_gradient_norm(min_gradient_norm),
+                    grad_norm(grad_norm),
                     initialization(initialization),
                     preinit_data(preinit_data),
                     dump_points(dump_points),
