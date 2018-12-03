@@ -57,6 +57,7 @@ namespace tsnecuda {
             float epssq = 0.05 * 0.05;
 
             float min_gradient_norm = 0.0;
+            float grad_norm = 0.0;
 
             // Initialization
             TSNE_INIT initialization = TSNE_INIT::GAUSSIAN;
