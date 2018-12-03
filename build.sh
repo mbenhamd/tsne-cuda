@@ -5,7 +5,7 @@ git submodule update
 cd ./build
 cmake  .. -DBUILD_PYTHON=ON -DWITH_MKL=ON -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6
 pwd
-make -j5 
+make -j $grep -c ^processor /proc/cpuinfo)
 make
 cd python/
 pwd
