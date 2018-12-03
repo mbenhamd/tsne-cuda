@@ -7,11 +7,9 @@ It's a forked from this [original](https://github.com/CannyLab/tsne-cuda).***
 
 - Allow for double precision
 - Expand FMM methods
-- Add multi-threaded CPU version for those without a GPU
 # Known Bugs
 
 - Odd bug with some datasets that causes a hang/gpu memory error. 
-
 
 # Citation
 
