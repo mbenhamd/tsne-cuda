@@ -83,9 +83,9 @@ namespace tsnecuda {
 
             // Various Constructors
             Options() {}
-            Options(float* return_data, float* points, int num_points, int num_dims) : 
+            Options(float* return_data, float* points, int num_points, int num_dims,float* grad_norm) : 
                 return_data(return_data), points(points), num_points(num_points),
-                        num_dims(num_dims) {this->random_seed = time(NULL);}
+                        num_dims(num_dims),grad_norm(grad_norm) {this->random_seed = time(NULL);}
             Options(float* points, int num_points, int num_dims, 
                     float perplexity, float learning_rate, float magnitude_factor, int num_neighbors,
                     int iterations, int iterations_no_progress, int force_magnify_iters, float perplexity_search_epsilon, float pre_exaggeration_momentum, float post_exaggeration_momentum, float theta, float epssq, float min_gradient_norm, float* grad_norm,

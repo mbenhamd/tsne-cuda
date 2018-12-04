@@ -1,7 +1,7 @@
 APPS := bh
 FLAGS := -O3 -arch=sm_61 -g -Xptxas -v
 NVCC := nvcc
-GCC := g++
+GCC := g++-6
 CC := $(GCC)
 
 .PHONY: all

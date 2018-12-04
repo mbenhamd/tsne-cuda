@@ -128,7 +128,7 @@ class TSNE(object):
                 ctypes.c_float, # Theta
                 ctypes.c_float, # epssq
                 ctypes.c_float, # Minimum gradient norm
-                N.ctypeslib.ndpointer(N.float32, ndim=1, flags='ALIGNED, F_CONTIGUOUS'), # grandient norm calculated
+                N.ctypeslib.ndpointer(N.float32, ndim=1, flags='ALIGNED, F_CONTIGUOUS, WRITEABLE'), # grandient norm calculated
                 ctypes.c_int, # Initialization types
                 N.ctypeslib.ndpointer(N.float32, ndim=2, flags='ALIGNED, F_CONTIGUOUS'), # Initialization Data
                 ctypes.c_bool, # Dump points
@@ -157,7 +157,7 @@ class TSNE(object):
         self.points = N.require(X, N.float32, ['CONTIGUOUS', 'ALIGNED'])
         self.embedding = N.zeros(shape=(X.shape[0],self.n_components))
         self.embedding = N.require(self.embedding , N.float32, ['F_CONTIGUOUS', 'ALIGNED', 'WRITEABLE'])
-        self.grad_norm = N.require(self.grad_norm , N.float32,['F_CONTIGUOUS','ALIGNED'])
+        self.grad_norm = N.require(self.grad_norm , N.float32,['F_CONTIGUOUS', 'ALIGNED', 'WRITEABLE'])
         
         # Handle Initialization
         if y is None:

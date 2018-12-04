@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
         printf("Starting TSNE calculation with %u points.\n", num_images);
 
         // Construct the options
-        tsnecuda::Options opt(nullptr, data, num_images, num_columns*num_rows);
+        tsnecuda::Options opt(nullptr, data, num_images, num_columns*num_rows,nullptr);
         opt.perplexity = FOPT(perplexity);
         opt.learning_rate = FOPT(learning-rate);
         opt.early_exaggeration = FOPT(early-ex);
@@ -116,7 +116,7 @@ int main(int argc, char** argv) {
         printf("Starting TSNE calculation with %u points.\n", num_images);
 
         // Construct the options
-        tsnecuda::Options opt(nullptr, data, num_images, num_columns*num_rows*num_channels);
+        tsnecuda::Options opt(nullptr, data, num_images, num_columns*num_rows*num_channels,nullptr);
         opt.perplexity = FOPT(perplexity);
         opt.learning_rate = FOPT(learning-rate);
         opt.early_exaggeration = FOPT(early-ex);
@@ -153,7 +153,7 @@ int main(int argc, char** argv) {
         printf("Starting TSNE calculation with %u points.\n", num_images);
         
         // Construct the options
-        tsnecuda::Options opt(nullptr, data, num_images, num_columns*num_rows*num_channels);
+        tsnecuda::Options opt(nullptr, data, num_images, num_columns*num_rows*num_channels,nullptr);
         opt.perplexity = FOPT(perplexity);
         opt.learning_rate = FOPT(learning-rate);
         opt.early_exaggeration = FOPT(early-ex);
@@ -196,7 +196,7 @@ int main(int argc, char** argv) {
         printf("Starting TSNE calculation with %u points.\n", IOPT(num-points));
         
         // Construct the options
-        tsnecuda::Options opt(nullptr, thrust::raw_pointer_cast(h_X.data()), IOPT(num-points),  IOPT(dim));
+        tsnecuda::Options opt(nullptr, thrust::raw_pointer_cast(h_X.data()), IOPT(num-points),  IOPT(dim),nullptr);
         opt.perplexity = FOPT(perplexity);
         opt.learning_rate = FOPT(learning-rate);
         opt.early_exaggeration = FOPT(early-ex);
@@ -204,8 +204,7 @@ int main(int argc, char** argv) {
         opt.iterations_no_progress = IOPT(num-steps);
         opt.magnitude_factor = FOPT(magnitude-factor);
         opt.initialization = init_type;
-        opt.num_neighbors = IOPT(nearest-neighbors);
-
+        opt.num_neighbors = IOPT(nearest-neighbors);        
         if (BOPT(dump)) {
             opt.enable_dump("dump_ys.txt", 1);
         }
@@ -215,10 +214,9 @@ int main(int argc, char** argv) {
 
         // Do the t-SNE
         tsnecuda::bh::RunTsne(opt, gpu_opt);
-
+        std::cout << "Bof:" << *opt.grad_norm << std::endl;
     } else {
         std::cout << "Dataset not recognized..." << std::endl;
-    }
-
+    }    
     return 0;
 }

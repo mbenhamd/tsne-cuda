@@ -92,7 +92,7 @@ class NaiveTSNE(object):
                                   ctypes.c_float, # Learning Rate
                                   ctypes.c_int, # n_iter
                                   ctypes.c_int, # n_iter w/o progress
-                                  ctypres.c_float # min_norm
+                                  ctypes.c_float # min_norm
                                 ]
 
         # Set up the attributed
@@ -112,15 +112,15 @@ class NaiveTSNE(object):
 
         X = N.require(X, N.float32, ['F_CONTIGUOUS', 'ALIGNED'])
         self.embedding_ = N.empty(shape=(X.shape[0],self.n_components))
-        self.embedding_ = N.require(results, N.float32, ['F_CONTIGUOUS', 'ALIGNED', 'WRITEABLE'])
+        self.embedding_ = N.require(self.embedding_, N.float32, ['F_CONTIGUOUS', 'ALIGNED', 'WRITEABLE'])
         self._lib.pymodule_naive_tsne(X, self.embedding_, X.ctypes.shape, 
-                                        c_int(self.n_components), 
-                                        c_float(self.perplexity), 
-                                        c_float(self.early_exaggeration),
-                                        c_float(self.learning_rate), 
-                                        c_int(self.n_iter),
-                                        c_int(self.n_iter_without_progress),
-                                        c_float(self.min_grad_norm))
+                                        ctypes.c_int(self.n_components), 
+                                        ctypes.c_float(self.perplexity), 
+                                        ctypes.c_float(self.early_exaggeration),
+                                        ctypes.c_float(self.learning_rate), 
+                                        ctypes.c_int(self.n_iter),
+                                        ctypes.c_int(self.n_iter_without_progress),
+                                        ctypes.c_float(self.min_grad_norm))
         return self.embedding_
 
 

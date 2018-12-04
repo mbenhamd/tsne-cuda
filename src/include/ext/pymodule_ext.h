@@ -65,7 +65,7 @@
                       float theta,
                       float epssq,
                       float min_gradient_norm,
-		      float grad_norm,	      
+		              float* grad_norm,	      
                       int initialization_type,
                       float* preinit_data,
                       bool dump_points,

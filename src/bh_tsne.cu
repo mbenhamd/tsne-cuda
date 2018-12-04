@@ -2,7 +2,7 @@
     Compute t-SNE via Barnes-Hut for NlogN time.
 */
 
-#include "bh_tsne.h"
+#include "include/bh_tsne.h"
 
 void tsnecuda::bh::RunTsne(tsnecuda::Options &opt,
                             tsnecuda::GpuOptions &gpu_opt)
@@ -39,7 +39,7 @@ void tsnecuda::bh::RunTsne(tsnecuda::Options &opt,
     const int num_points = opt.num_points;
     const int num_neighbors = (opt.num_neighbors < num_points) ? opt.num_neighbors : num_points;
     const float *high_dim_points = opt.points;
-    float *compute_grad_norm = opt.grad_norm;
+    float grad_norm;
     const int high_dim = opt.num_dims;
     const float perplexity = opt.perplexity;
     const float perplexity_search_epsilon = opt.perplexity_search_epsilon;
@@ -50,8 +50,7 @@ void tsnecuda::bh::RunTsne(tsnecuda::Options &opt,
 
     // Theta governs tolerance for Barnes-Hut recursion
     const float theta = opt.theta;
-    const float epsilon_squared = opt.epssq;
-
+    const float epsilon_squared = opt.epssq;    
     // Figure out number of nodes needed for BH tree
     int nnodes = num_points * 2;
     if (nnodes < 1024 * num_blocks) nnodes = 1024 * num_blocks;
@@ -69,24 +68,20 @@ void tsnecuda::bh::RunTsne(tsnecuda::Options &opt,
     // Initialize global variables
     thrust::device_vector<int> err_device(1);
     tsnecuda::bh::Initialize(gpu_opt, err_device);
-
     // Compute approximate K Nearest Neighbors and squared distances
     tsnecuda::util::KNearestNeighbors(gpu_opt, knn_indices, knn_squared_distances, high_dim_points, high_dim, num_points, num_neighbors);
     thrust::device_vector<long> knn_indices_long_device(knn_indices, knn_indices + num_points * num_neighbors);
     thrust::device_vector<int> knn_indices_device(num_points * num_neighbors);
     tsnecuda::util::PostprocessNeighborIndices(gpu_opt, knn_indices_device, knn_indices_long_device, 
                                                         num_points, num_neighbors);
-    
     // Max-norm the distances to avoid exponentiating by large numbers
     thrust::device_vector<float> knn_squared_distances_device(knn_squared_distances, 
                                             knn_squared_distances + (num_points * num_neighbors));
     tsnecuda::util::MaxNormalizeDeviceVector(knn_squared_distances_device);
-
     // Search Perplexity
     thrust::device_vector<float> pij_non_symmetric_device(num_points * num_neighbors);
     tsnecuda::bh::SearchPerplexity(gpu_opt, dense_handle, pij_non_symmetric_device, knn_squared_distances_device, 
                                     perplexity, perplexity_search_epsilon, num_points, num_neighbors);
-
     // Clean up memory
     knn_squared_distances_device.clear();
     knn_squared_distances_device.shrink_to_fit();
@@ -94,7 +89,6 @@ void tsnecuda::bh::RunTsne(tsnecuda::Options &opt,
     knn_indices_long_device.shrink_to_fit();
     delete[] knn_squared_distances;
     delete[] knn_indices;
-
     // Symmetrize the pij matrix
     thrust::device_vector<float> sparse_pij_device;
     thrust::device_vector<int> pij_row_ptr_device;
@@ -102,15 +96,13 @@ void tsnecuda::bh::RunTsne(tsnecuda::Options &opt,
     tsnecuda::util::SymmetrizeMatrix(sparse_handle, sparse_pij_device, pij_row_ptr_device,
                                         pij_col_ind_device, pij_non_symmetric_device, knn_indices_device,
                                         opt.magnitude_factor, num_points, num_neighbors);
-
     const int num_nonzero = sparse_pij_device.size();
 
     // Clean up memory
     knn_indices_device.clear();
     knn_indices_device.shrink_to_fit();
     pij_non_symmetric_device.clear();
-    pij_non_symmetric_device.shrink_to_fit();
-
+    pij_non_symmetric_device.shrink_to_fit();   
     // Declare memory
     thrust::device_vector<float> pij_x_qij_device(sparse_pij_device.size());
     thrust::device_vector<float> repulsive_forces_device((num_nodes + 1) * 2, 0);
@@ -228,7 +220,6 @@ void tsnecuda::bh::RunTsne(tsnecuda::Options &opt,
             momentum = opt.post_exaggeration_momentum;
             attr_exaggeration = 1.0f;
         }
-
         // Compute Bounding Box
         tsnecuda::bh::ComputeBoundingBox(gpu_opt,
                                          cell_starts_device,
@@ -242,7 +233,6 @@ void tsnecuda::bh::RunTsne(tsnecuda::Options &opt,
                                          num_nodes, 
                                          num_points, 
                                          num_blocks);
-
         // Tree Builder
         tsnecuda::bh::BuildTree(gpu_opt,
                                 err_device,
@@ -327,24 +317,22 @@ void tsnecuda::bh::RunTsne(tsnecuda::Options &opt,
         // Add a bit of random motion to prevent points from being on top of each other
         thrust::transform(points_device.begin(), points_device.end(), random_vector_device.begin(),
                             points_device.begin(), thrust::plus<float>());
-
         // Compute the gradient norm
         tsnecuda::util::SquareDeviceVector(attractive_forces_device, old_forces_device);
         thrust::transform(attractive_forces_device.begin(), attractive_forces_device.begin()+num_points, 
                           attractive_forces_device.begin()+num_points, attractive_forces_device.begin(), 
-                          thrust::plus<float>());
-        tsnecuda::util::SqrtDeviceVector(attractive_forces_device, attractive_forces_device);
-        *compute_grad_norm = thrust::reduce(attractive_forces_device.begin(), attractive_forces_device.begin()+num_points, 
+                          thrust::plus<float>());                       
+        tsnecuda::util::SqrtDeviceVector(attractive_forces_device, attractive_forces_device);                      
+        grad_norm = thrust::reduce(attractive_forces_device.begin(), attractive_forces_device.begin()+num_points, 
                                          0.0f, thrust::plus<float>()) / num_points;
         thrust::fill(attractive_forces_device.begin(), attractive_forces_device.end(), 0.0f);
-
-        if (*compute_grad_norm < opt.min_gradient_norm) {
+        if (grad_norm < opt.min_gradient_norm) {
             if (opt.verbosity >= 1) std::cout << "Reached minimum gradient norm: " << opt.min_gradient_norm << std::endl;
             break;
         }
 
         if (opt.verbosity >= 1 && step % opt.print_interval == 0) {
-            std::cout << "[Step " << step << "] Avg. Gradient Norm: " << *compute_grad_norm << std::endl;
+            std::cout << "[Step " << step << "] Avg. Gradient Norm: " << grad_norm << std::endl;
         }
             
         
@@ -402,6 +390,7 @@ void tsnecuda::bh::RunTsne(tsnecuda::Options &opt,
       thrust::copy(points_device.begin()+num_nodes+1, points_device.begin()+num_nodes+1+opt.num_points, snap_num*opt.num_points*2 + opt.return_data+opt.num_points);
     }
 
+    opt.grad_norm = &grad_norm;
     // Return some final values
     opt.trained = true;
     opt.trained_norm = normalization;

@@ -141,3 +141,4 @@ void pymodule_bh_tsne(float *result,
 
     // Copy the data back from the GPU
     cudaDeviceSynchronize();
+
