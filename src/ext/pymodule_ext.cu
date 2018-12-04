@@ -46,6 +46,7 @@ void pymodule_bh_tsne(float *result,
                       float theta,
                       float epssq,
                       float min_gradient_norm,
+                      float *grad_norm,
                       int initialization_type,
                       float* preinit_data,
                       bool dump_points,
@@ -70,7 +71,7 @@ void pymodule_bh_tsne(float *result,
     tsnecuda::GpuOptions gpu_opt(gpu_device);
 
     // Construct the options
-    tsnecuda::Options opt(result, points, num_points, num_dims);
+    tsnecuda::Options opt(result, points, num_points, num_dims,grad_norm);
 
     // Setup one-off options
     opt.perplexity = perplexity;
@@ -86,6 +87,7 @@ void pymodule_bh_tsne(float *result,
     opt.theta = theta;
     opt.epssq = epssq;
     opt.min_gradient_norm = min_gradient_norm;
+    opt.grad_norm = grad_norm;
     opt.verbosity = verbosity;
     opt.print_interval = print_interval;
     
