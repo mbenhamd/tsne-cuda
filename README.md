@@ -3,6 +3,8 @@
 ***WARNING: This code is still in active development. While the core code is tested and working, some features need aditional testing.
 It's a forked from this [original](https://github.com/CannyLab/tsne-cuda).***
 
+####Gradient norm returned for Hyperparameter optimization
+
 # Future work
 
 - Allow for double precision
