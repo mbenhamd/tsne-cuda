@@ -1,55 +1,36 @@
+// Implementation file for the python extensions
 
-#ifndef PYMODULE_EXT_H
-#define PYMODULE_EXT_H
+#include "include/ext/pymodule_ext.h"
 
-    #include <sys/types.h>
-    #include "common.h"
-    #include "include/options.h"
-    #include "util/distance_utils.h"
-    #include "naive_tsne.h"
-    #include "bh_tsne.h"
+void pymodule_naive_tsne(float *points, float *result, ssize_t *dims, int proj_dim, float perplexity, float early_ex, 
+                            float learning_rate, int n_iter,  int n_iter_np, float min_g_norm) {
+    
+    // Extract the dimensions of the points array
+    ssize_t N_POINTS = dims[0];
+    ssize_t N_DIMS = dims[1];
 
-    extern "C" {
-        /**
-         * @brief Exposed array for the computation of the pairwise euclidean distance
-         * 
-         * @param points The points to compute the distance on, Column-Major NxNDIM array
-         * @param dist The output distance array
-         * @param dims The dimensions of the points matrix
-         */
-        void pymodule_e_dist(float* points, float* dist, ssize_t *dims);
-        
-        /**
-         * @brief Exposed method for computing the pij array in the external python module
-         * 
-         * @param points The points to compute, Column-Major NxNDIM array
-         * @param sigmas The relevant sigmas
-         * @param result The result array
-         * @param dimsm The dimensions of the points array
-         */
-        void pymodule_compute_pij(float *points, float* sigmas, float *result, ssize_t *dimsm);
+    // Construct device arrays
+    thrust::device_vector<float> d_points(N_POINTS*N_DIMS);
 
-        /**
-         * @brief Exposed method for computing naive T-SNE in the external python module
-         * 
-         * @param points The points to compute, Column-Major NxNDIM array
-         * @param result The result array
-         * @param dimsm The dimensions of the points array
-         * @param proj_dim The number of dimensions to project to
-         * @param perplexity The target perplexity
-         * @param early_ex The early learning rate exaggeration factor
-         * @param learning_rate The learning rate of the gradient ascent
-         * @param n_iter The number of iterations to run for
-         * @param n_iter_np The number of iterations to run for with no progress
-         * @param min_g_norm The minimum gradient norm for termination
-         */
-        void pymodule_naive_tsne(float *points, float *result, ssize_t *dimsm, 
-                                    int proj_dim, float perplexity, float early_ex, 
-                                    float learning_rate, int n_iter,  int n_iter_np, 
-                                    float min_g_norm);
+    // Copy the points to the GPU using thrust
+    thrust::copy(points, points+N_DIMS*N_POINTS, d_points.begin());
 
+    // Construct the sigmas
+    thrust::device_vector<float> sigmas(N_POINTS, 1.0f);
 
-	void pymodule_bh_tsne(float *result,
+    // Create the CUBLAS handle
+    cublasHandle_t handle;
+    CublasSafeCall(cublasCreate(&handle));
+
+    // Do the T-SNE
+    auto tsne_result = NaiveTSNE::tsne(handle, d_points, N_POINTS, N_DIMS, proj_dim, perplexity, 
+                                            early_ex, learning_rate, n_iter, n_iter_np, min_g_norm);
+
+    // Copy the data back to the CPU
+    thrust::copy(tsne_result.begin(), tsne_result.end(), result);
+}
+
+void pymodule_bh_tsne(float *result,
                       float* points,
                       ssize_t *dims,
                       float perplexity, 
@@ -65,7 +46,6 @@
                       float theta,
                       float epssq,
                       float min_gradient_norm,
-		              float grad_norm,	      
                       int initialization_type,
                       float* preinit_data,
                       bool dump_points,
@@ -79,8 +59,83 @@
                       int gpu_device,
                       int return_style,
                       int num_snapshots
-                 );
+                      
+                    ) {
 
+    // Extract the dimensions of the points array
+    ssize_t num_points = dims[0];
+    ssize_t num_dims = dims[1];
+
+    // Construct the GPU options
+    tsnecuda::GpuOptions gpu_opt(gpu_device);
+
+    // Construct the options
+    tsnecuda::Options opt(result, points, num_points, num_dims);
+
+    // Setup one-off options
+    opt.perplexity = perplexity;
+    opt.learning_rate = learning_rate;
+    opt.magnitude_factor = magnitude_factor;
+    opt.num_neighbors = num_neighbors;
+    opt.iterations = iterations;
+    opt.iterations_no_progress = iterations_no_progress;
+    opt.force_magnify_iters = force_magnify_iters;
+    opt.perplexity_search_epsilon = perplexity_search_epsilon;
+    opt.pre_exaggeration_momentum = pre_exaggeration_momentum;
+    opt.post_exaggeration_momentum = post_exaggeration_momentum;
+    opt.theta = theta;
+    opt.epssq = epssq;
+    opt.min_gradient_norm = min_gradient_norm;
+    opt.verbosity = verbosity;
+    opt.print_interval = print_interval;
+    
+    // Initialization
+    switch (initialization_type) {
+        case 0:
+            opt.initialization = tsnecuda::TSNE_INIT::UNIFORM;
+            break;
+        case 1:
+            opt.initialization = tsnecuda::TSNE_INIT::GAUSSIAN;
+            break;
+        case 2:
+            //opt.initialization = tsnecuda::TSNE_INIT::RESUME;
+            std::cerr << "E: RESUME initialization not yet supported fully..." << std::endl;
+            exit(1);
+        case 3:
+            opt.initialization = tsnecuda::TSNE_INIT::VECTOR;
+            opt.preinit_data = preinit_data;
+            break;
+        default:
+            std::cerr << "E: Invalid initialization supplied" << std::endl;
+            exit(1);
     }
 
-#endif
+    // Point dumping
+    if (dump_points) {
+        opt.enable_dump(std::string(dump_file), dump_interval);
+    }
+
+    // Enable Interactive Visualization
+    if (use_interactive) {
+        opt.enable_viz(std::string(viz_server), viz_timeout);
+    }
+    
+    // Return data setup
+    switch(return_style) {
+        case 0:
+            opt.return_style = tsnecuda::RETURN_STYLE::ONCE;
+            break;
+        case 1:
+            opt.return_style = tsnecuda::RETURN_STYLE::SNAPSHOT;
+            opt.num_snapshots = num_snapshots;
+            break;
+        default:
+            std::cerr << "E: Invalid return style supplied" << std::endl;
+            exit(1);
+    }
+
+    // Do the t-SNE
+    tsnecuda::bh::RunTsne(opt, gpu_opt);
+
+    // Copy the data back from the GPU
+    cudaDeviceSynchronize();
